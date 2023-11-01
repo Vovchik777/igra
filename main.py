@@ -1,3 +1,5 @@
+import random
+
 import pygame
 
 from configs import *
@@ -92,6 +94,42 @@ class Text:
         self.text_write = self.font.render(self.text, True, self.text_color)
 
 
+class Player:
+    def __init__(self, x, y, w, h, speed, team_color,border_radius = 3):
+        self.border_radius = border_radius
+        self.h = h
+        self.w = w
+        self.team_color = team_color
+        self.speed = speed
+        self.y = y
+        self.x = x
+    def draw(self):
+        r = pygame.Rect(self.x, self.y, self.w, self.h)
+        pygame.draw.rect(screen, self.team_color, r,border_radius=self.border_radius)
+
+    def move_x(self):
+        if self.get_speed() < 0:
+            if self.x > 0:
+                self.x += self.speed
+        else:
+            if self.x+self.w < ScreenWidth:
+                self.x += self.speed
+
+
+    def check_wall(self):
+        if self.x <= 0 or self.x + self.w >=ScreenWidth:
+            self.speed*=-1
+
+
+
+    def reverse_speed(self):
+        self.speed*=-1
+
+
+    def get_speed(self):
+        return self.speed
+
+
 start_button_play = Button(screen, (255, 125, 255), "Играть", (0, 130, 60), font_name='arial', border_radius=15)
 
 start_button_exit = Button(screen, (255, 0, 125), "Выход", (0, 125, 0), font_size=20, border_radius=15)
@@ -116,9 +154,11 @@ text_max = Text('Максимальное количество ботов!', (0,
 max = False
 text_min = Text('Минимальное количество ботов!', (0, 255, 0), font_size=30)
 min = False
+
+bots = []
+
+
 # 441 280
-
-
 
 
 def screen_draw():
@@ -131,7 +171,6 @@ def screen_draw():
         start_button_exit.draw()
         start_button_exit.move(screen.get_width() // 2 - start_button_exit.get_width() // 2,
                                screen.get_height() // 2 - start_button_exit.get_height() // 2 + 100)
-
 
     if scene == 'configure_game':
         screen.fill((123, 87, 0))
@@ -158,8 +197,23 @@ def screen_draw():
             text_min.write()
     if scene == 'game':
         bg = pygame.image.load('bg.jpg')
-        screen.blit(bg,(0,0))
+        screen.blit(bg, (0, 0))
+
+        for i in bots:
+            i.move_x()
+            i.check_wall()
+
+        for i in bots:
+            i.draw()
+        player.draw()
+
+
     pygame.display.flip()
+
+player = Player(ScreenWidth//2,ScreenHeight//2+ScreenHeight//4,50,50,5,(255,0,0),7)
+
+def speed_ball():
+    pass
 
 
 while True:
@@ -198,5 +252,27 @@ while True:
                         min = True
                 if button_start_game.is_pressed(mpos):
                     scene = 'game'
+
+                    for i in range(int(text_bot.get_value())):
+                        bots.append(
+                            Player(random.randrange(100, ScreenWidth - 25),
+                                   random.randrange(50, ScreenHeight // 2 - 50), 25, 25,
+                                   random.choice((3, -3,2,-2)),
+                                   (0, 0, 255)))
+
+    if scene == 'game':
+        if pygame.key.get_pressed()[pygame.K_a]:
+            if player.get_speed() == -5:
+                player.move_x()
+            else:
+                player.reverse_speed()
+                player.move_x()
+        elif pygame.key.get_pressed()[pygame.K_d]:
+            if player.get_speed() == 5:
+                player.move_x()
+            else:
+                player.reverse_speed()
+                player.move_x()
+
     screen_draw()
     clock.tick(FPS)
