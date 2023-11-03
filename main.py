@@ -1,5 +1,6 @@
+import math
 import random
-
+from turtle import Vec2D
 import pygame
 
 from configs import *
@@ -95,7 +96,8 @@ class Text:
 
 
 class Player:
-    def __init__(self, x, y, w, h, speed, team_color,border_radius = 3):
+    def __init__(self, x, y, w, h, speed, team_color, border_radius=3, ugol=45):
+        self.ugol = ugol
         self.border_radius = border_radius
         self.h = h
         self.w = w
@@ -103,31 +105,50 @@ class Player:
         self.speed = speed
         self.y = y
         self.x = x
+
+        self.poschitat_coord()
+
+    def poschitat_coord(self):
+        self.coord = [(Vec2D(-1 * self.w / 2, -1 * self.h / 2).rotate(self.ugol)),
+                      (Vec2D(-1 * self.w / 2, self.h / 2).rotate(self.ugol)),
+                      (Vec2D(self.w / 2, self.h / 2).rotate(self.ugol)),
+                      (Vec2D(self.w / 2, -1 * self.h / 2).rotate(self.ugol))
+
+                      ]
+
+    def rotate_left(self):
+        self.ugol -= 5
+        self.poschitat_coord()
+
+
+    def rotate_right(self):
+        self.ugol += 5
+        self.poschitat_coord()
+
     def draw(self):
-        r = pygame.Rect(self.x, self.y, self.w, self.h)
-        pygame.draw.rect(screen, self.team_color, r,border_radius=self.border_radius)
+
+        pygame.draw.polygon(screen, self.team_color, self.get_wershini())
 
     def move_x(self):
         if self.get_speed() < 0:
             if self.x > 0:
                 self.x += self.speed
         else:
-            if self.x+self.w < ScreenWidth:
+            if self.x + self.w < ScreenWidth:
                 self.x += self.speed
 
-
     def check_wall(self):
-        if self.x <= 0 or self.x + self.w >=ScreenWidth:
-            self.speed*=-1
-
-
+        if self.x <= 0 or self.x + self.w >= ScreenWidth:
+            self.speed *= -1
 
     def reverse_speed(self):
-        self.speed*=-1
-
+        self.speed *= -1
 
     def get_speed(self):
         return self.speed
+
+    def get_wershini(self):
+        return [(c[0] +self.x + self.w // 2 , c[1] + self.y + self.h // 2) for c in self.coord]
 
 
 start_button_play = Button(screen, (255, 125, 255), "Играть", (0, 130, 60), font_name='arial', border_radius=15)
@@ -156,6 +177,8 @@ text_min = Text('Минимальное количество ботов!', (0, 2
 min = False
 
 bots = []
+botscoor = []
+lasti = (0, 0)
 
 
 # 441 280
@@ -165,6 +188,9 @@ def screen_draw():
     screen.fill((0, 0, 0))
     if scene == 'start':
         screen.fill((0, 0, 255))
+        pygame.draw.polygon(screen, (0, 0, 0),
+                            [[506.1524436414174, 458.5753350320303], [543.8475563585827, 458.5753350320303],
+                             [543.8475563585827, 491.4246649679697], [506.1524436414174, 491.4246649679697]])
         start_button_play.draw()
         start_button_play.move(screen.get_width() // 2 - start_button_play.get_width() // 2,
                                screen.get_height() // 2 - start_button_play.get_height() // 2)
@@ -207,10 +233,11 @@ def screen_draw():
             i.draw()
         player.draw()
 
-
     pygame.display.flip()
 
-player = Player(ScreenWidth//2,ScreenHeight//2+ScreenHeight//4,50,50,5,(255,0,0),7)
+
+player = Player(ScreenWidth // 2, ScreenHeight // 2 + ScreenHeight // 4, 50, 75, 5, (255, 0, 0), 7,ugol=0)
+
 
 def speed_ball():
     pass
@@ -252,27 +279,39 @@ while True:
                         min = True
                 if button_start_game.is_pressed(mpos):
                     scene = 'game'
+                    while len(botscoor) < int(text_bot.get_value()):
+                        tempxbot = random.randrange(0, ScreenWidth - botWidth)
+                        tempybot = random.randrange(50, ScreenHeight // 2 - botHeight )
+                        podhodit = True
 
-                    for i in range(int(text_bot.get_value())):
-                        bots.append(
-                            Player(random.randrange(100, ScreenWidth - 25),
-                                   random.randrange(50, ScreenHeight // 2 - 50), 25, 25,
-                                   random.choice((3, -3,2,-2)),
-                                   (0, 0, 255)))
+                        for i in botscoor:
+                            if abs(i[0] - tempxbot) < botWidth and abs(i[1] - tempybot) < botHeight:
+                                podhodit = False
+                                break
+                        print(len(botscoor),podhodit)
+                        if podhodit:
+                            botscoor.append((tempxbot, tempybot))
+                            bots.append(Player(tempxbot,tempybot,botWidth,botHeight,random.choice((-3,3,-2,2)),(0,0,255),ugol=0))
+
 
     if scene == 'game':
-        if pygame.key.get_pressed()[pygame.K_a]:
+        pressed = pygame.key.get_pressed()
+        if pressed[pygame.K_a]:
             if player.get_speed() == -5:
                 player.move_x()
             else:
                 player.reverse_speed()
                 player.move_x()
-        elif pygame.key.get_pressed()[pygame.K_d]:
+        elif pressed[pygame.K_d]:
             if player.get_speed() == 5:
                 player.move_x()
             else:
                 player.reverse_speed()
                 player.move_x()
+        if pressed[pygame.K_RIGHT]:
+            player.rotate_right()
+        if pressed[pygame.K_LEFT]:
+            player.rotate_left()
 
     screen_draw()
     clock.tick(FPS)
